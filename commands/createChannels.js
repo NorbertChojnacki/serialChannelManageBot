@@ -12,8 +12,6 @@ class SubCom{
     get getSubCom(){
         return this.sub;
     }
-
-
 }
 
 class Inline extends SubCom{
