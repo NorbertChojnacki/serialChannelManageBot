@@ -1,6 +1,7 @@
+// @ts-ignore
 const {SlashCommandBuilder, SlashCommandSubcommandBuilder} = require('@discordjs/builders');
+// @ts-ignore
 const {CategoryChannel, Permissions, Interaction} = require('discord.js');
-const wait = require('util').promisify(setTimeout);
 
 class SubCom{
     constructor(name, desc){
@@ -76,7 +77,17 @@ class Inline extends SubCom{
     }
 
     catchValues({options}){
-        this.values = new Object();
+        /**
+         * Values from request
+         * @namespace
+         * @property {String} channel_name - core name of the channel
+         * @property {Number} channel_quantity - quantity of the channels
+         * @property {Boolean} create_folder - if channels are placed in folder
+         * @property {"GUILD_TEXT"|"GUILD_VOICE"|"BOTH"} what_channels - what channels should be created
+         * @property {Boolean} start_from_zero - if counting should start from zero
+         * @property {Boolean} create_shared_text_channel - create coop folder
+         */
+        this.values = {}
 
         options._hoistedOptions.forEach(val=>{
             this.values[val.name] = val.value;
@@ -96,16 +107,15 @@ class Inline extends SubCom{
             let num =  i < 10 ? `0${i}`: i;
 
             /**
-             * @param {creationForCallback}
+             * @param {creationForCallback} callback
              */
             callback(`${num}-${name}`);
         }
     }
 
     /**
-     * 
      * @param {Interaction} interaction 
-     * @returns {Array}
+     * @returns {Promise<Array>}
      */
     async getRoles(interaction){
         let roles = interaction.guild.roles;
