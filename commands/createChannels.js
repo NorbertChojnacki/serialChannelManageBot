@@ -71,12 +71,14 @@ class Inline extends SubCom{
     async respond(interaction){
         await interaction.reply({content:'inline', ephemeral: true});
 
-        this.catchValues(interaction)
+        this.inter = interaction;
+        this.catchValues()
 
-        this.doWhatHaveTo(interaction)
+        this.doWhatHaveTo()
     }
 
-    catchValues({options}){
+    catchValues(){
+        let {options} = this.inter;
         /**
          * Values from request
          * @namespace
@@ -114,11 +116,10 @@ class Inline extends SubCom{
     }
 
     /**
-     * @param {Interaction} interaction 
      * @returns {Promise<Array>}
      */
-    async getRoles(interaction){
-        let roles = interaction.guild.roles;
+    async getRoles(){
+        let roles = this.inter.guild.roles;
     
         this.creationFor(name=>{
             roles.create({
@@ -145,13 +146,13 @@ class Inline extends SubCom{
         return allRoles;
     }
 
-    async doWhatHaveTo(interaction){
-        let channels = interaction.guild.channels;
-        let roles = interaction.guild.roles;
+    async doWhatHaveTo(){
+        let channels = this.inter.guild.channels;
+        let roles = this.inter.guild.roles;
 
         let {id} = this.values.create_folder ? await channels.create(this.values.channel_name, {type: 'GUILD_CATEGORY'}) : {id: null};
 
-        let allRoles = await this.getRoles(interaction);
+        let allRoles = await this.getRoles();
 
 
         /**
