@@ -56,10 +56,13 @@ class Inline extends SubCom{
                     .setDescription('Do you want want to start from zero?')
                     .setRequired(false)
             })
-            .addBooleanOption(option =>{
+            .addStringOption(option =>{
                 return option
-                    .setName('create_shared_text_channel')
-                    .setDescription('Do you want to create shared text channel for your groups?')
+                    .setName('create_shared_channel')
+                    .setDescription('Do you want to create shared channel(s) for your groups?')
+                    .addChoice('Text Channel', 'GUILD_TEXT')
+                    .addChoice('Voice Channel', 'GUILD_VOICE')
+                    .addChoice('Both', 'BOTH')
                     .setRequired(false)
             })
     }
@@ -87,7 +90,7 @@ class Inline extends SubCom{
          * @property {Boolean} create_folder - if channels are placed in folder
          * @property {"GUILD_TEXT"|"GUILD_VOICE"|"BOTH"} what_channels - what channels should be created
          * @property {Boolean} start_from_zero - if counting should start from zero
-         * @property {Boolean} create_shared_text_channel - create coop folder
+         * @property {"GUILD_TEXT"|"GUILD_VOICE"|"BOTH"} create_shared_channel - create coop folder
          */
         this.values = {}
 
@@ -154,7 +157,6 @@ class Inline extends SubCom{
 
         let allRoles = await this.getRoles();
 
-
         /**
          * Creates channel
          * @param {string} name channel name
@@ -181,6 +183,7 @@ class Inline extends SubCom{
             })
         }
 
+        //* get-role channel creation
         if(this.values.create_folder){
             channels.create('get-role', {
                 parent: id,
@@ -189,9 +192,67 @@ class Inline extends SubCom{
                     id: roles.everyone.id,
                     allow: [Permissions.FLAGS.VIEW_CHANNEL]
                 }]
+            }).then(channel=>{
+                channel.send({embeds: [{
+                    color: 'PURPLE',
+                    title: 'Groups you can join',
+                    description: 'To get role just type: /join group_number-group_name',
+                    fields:[
+                        {
+                            name: `example`,
+                            value: `/join ${this.values?.start_from_zero ? '00' : '01'}-${this.values.channel_name}`,
+                            inline: false
+                        },
+                        {
+                            name: `available number of groups`,
+                            value: `${this.values.channel_quantity}`,
+                            inline: false
+                        },
+                        {
+                            name: `name of the group`,
+                            value: `${this.values.channel_name}`,
+                            inline: false
+                        },
+                        {
+                            name: `lowest channel number`,
+                            value: `${this.values?.start_from_zero ? '00' : '01'}`,
+                            inline: false
+                        }
+                    ]
+                }]})
+            }).catch(console.error)
+        }
+
+        //* Shared channel creation
+        if(this.values?.create_shared_channel !== "BOTH"){
+            channels.create(`coop-channel-${this.values.channel_name}`,{
+                parent: id,
+                type: this.values.create_shared_channel,
+                permissionOverwrites:[{
+                    id: roles.everyone.id,
+                    allow: [Permissions.FLAGS.VIEW_CHANNEL]
+                }]
+            })
+        }else if(this.values?.create_shared_channel === 'BOTH'){
+            channels.create(`coop-channel-${this.values.channel_name}`,{
+                parent: id,
+                type: "GUILD_VOICE",
+                permissionOverwrites:[{
+                    id: roles.everyone.id,
+                    allow: [Permissions.FLAGS.VIEW_CHANNEL]
+                }]
+            })
+            channels.create(`coop-channel-${this.values.channel_name}`,{
+                parent: id,
+                type: "GUILD_TEXT",
+                permissionOverwrites:[{
+                    id: roles.everyone.id,
+                    allow: [Permissions.FLAGS.VIEW_CHANNEL]
+                }]
             })
         }
 
+        //* creating all wanted channels
         this.creationFor(name=>{
             if(this.values.what_channels !== 'BOTH'){
                 createChannel(name, this.values.what_channels, allRoles[name])
@@ -224,8 +285,8 @@ module.exports = {
             .setName('createchannels')
             .setDescription('Creates serial channels with given options')
             .addSubcommand(subCommands.inline.getSubCom)
-            .addSubcommand(subCommands.setup.getSubCom)
-,
+            // .addSubcommand(subCommands.setup.getSubCom)
+        ,
         async execute(interaction){
             let respond = 'null';
 
@@ -235,8 +296,6 @@ module.exports = {
                 subCommands.inline.respond(interaction); 
                 // subCommands.inline.doWhatHaveTo(interaction);
             }
-            if(name === 'setup') subCommands.setup.respond(interaction);
-
-            
+            if(name === 'setup') subCommands.setup.respond(interaction);   
         }
 }
