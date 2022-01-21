@@ -1,9 +1,15 @@
+// @ts-ignore
 const DiscordJS = require('discord.js');
+// @ts-ignore
 const { MessageActionRow,MessageEmbed, MessageSelectMenu } = require('discord.js');
+// @ts-ignore
 const { SlashCommandBuilder } = require('@discordjs/builders');
+// @ts-ignore
 const {REST} = require('@discordjs/rest');
+// @ts-ignore
 const { Routes } = require('discord-api-types/v9');
 const fs = require('fs');
+// @ts-ignore
 const dotenv = require('dotenv')
 dotenv.config()
 
