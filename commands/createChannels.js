@@ -185,7 +185,7 @@ class Inline extends SubCom{
 
         //* get-role channel creation
         if(this.values.create_folder){
-            channels.create('get-role', {
+            channels.create(`get-role-${this.values.channel_name}`, {
                 parent: id,
                 type: 'GUILD_TEXT',
                 permissionOverwrites:[{
@@ -224,7 +224,8 @@ class Inline extends SubCom{
         }
 
         //* Shared channel creation
-        if(this.values?.create_shared_channel !== "BOTH"){
+        if(this.values?.create_shared_channel !== "BOTH" && this.values?.create_shared_channel){
+            console.log('shared', this.values?.create_shared_channel)
             channels.create(`coop-channel-${this.values.channel_name}`,{
                 parent: id,
                 type: this.values.create_shared_channel,
@@ -288,14 +289,9 @@ module.exports = {
             // .addSubcommand(subCommands.setup.getSubCom)
         ,
         async execute(interaction){
-            let respond = 'null';
-
             let name = interaction.options.getSubcommand();
 
-            if(name === 'inline'){
-                subCommands.inline.respond(interaction); 
-                // subCommands.inline.doWhatHaveTo(interaction);
-            }
+            if(name === 'inline') subCommands.inline.respond(interaction); 
             if(name === 'setup') subCommands.setup.respond(interaction);   
         }
 }

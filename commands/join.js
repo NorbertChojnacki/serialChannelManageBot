@@ -36,7 +36,6 @@ module.exports = {
                     default: this.respond = "Another error"; console.log(error.message);
                 }
             }finally{
-
                 interaction.reply({content: this.respond, ephemeral: true});
             } 
         }
