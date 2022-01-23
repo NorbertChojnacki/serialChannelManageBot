@@ -16,11 +16,36 @@ class SubCom{
     get getSubCom(){
         return this.sub;
     }
+
+    /**
+     * @param {Interaction} interaction 
+     */
+    async respond(interaction){
+        await interaction.reply({content:'inline', ephemeral: true});
+
+        this.inter = interaction;
+        this.guild = this.inter.guild
+        this.catchValues()
+        this.doWhatHaveTo()
+    }
+
+    catchValues(){
+        let {options} = this.inter;
+
+        options._hoistedOptions.forEach(val=>{
+            this.values[val.name] = val.value;
+        })
+    }
+
+    doWhatHaveTo(){
+
+    }
+
 }
 
 class Create extends SubCom{
     constructor(){
-        super('Create','Creates channels');
+        super('create','Creates channels');
 
         //* Creating subcommand 
         this.sub
@@ -69,36 +94,6 @@ class Create extends SubCom{
                     .setRequired(false)
             })
     }
-    
-    /**
-     * @param {Interaction} interaction 
-     */
-    async respond(interaction){
-        await interaction.reply({content:'inline', ephemeral: true});
-
-        this.inter = interaction;
-        this.catchValues()
-
-        this.doWhatHaveTo()
-    }
-
-    catchValues(callback){
-        let {options} = this.inter;
-        /**
-         * Values from request
-         * @namespace
-         * @property {String} channel_name - core name of the channel
-         * @property {Number} channel_quantity - quantity of the channels
-         * @property {Boolean} create_folder - if channels are placed in folder
-         * @property {"GUILD_TEXT"|"GUILD_VOICE"|"BOTH"} what_channels - what channels should be created
-         * @property {Boolean} start_from_zero - if counting should start from zero
-         * @property {"GUILD_TEXT"|"GUILD_VOICE"|"BOTH"} create_shared_channel - create coop folder
-         */
-
-        options._hoistedOptions.forEach(val=>{
-            this.values[val.name] = val.value;
-        })
-    }
 
     /**
      * Returns changing name
@@ -123,7 +118,7 @@ class Create extends SubCom{
      * @returns {Promise<Array>}
      */
     async getRoles(){
-        let roles = this.inter.guild.roles;
+        let roles = this.guild.roles;
     
         this.creationFor(name=>{
             roles.create({
@@ -151,8 +146,8 @@ class Create extends SubCom{
     }
 
     async doWhatHaveTo(){
-        let channels = this.inter.guild.channels;
-        let roles = this.inter.guild.roles;
+        let channels = this.guild.channels;
+        let roles = this.guild.roles;
 
         let {id} = this.values.create_folder ? await channels.create(this.values.channel_name, {type: 'GUILD_CATEGORY'}) : {id: null};
 
@@ -267,17 +262,26 @@ class Create extends SubCom{
     }
 }
 
+class Delete extends SubCom{
+    constructor(){
+        super('delete', 'Deletes chosen channels or categories')
+    }
+
+    async doWhatHaveTo(){
+
+    }
+}
 
 const subCommands = {
-    create: new Create()
+    create: new Create(),
+    delete: new Delete()
 }
 
 module.exports = {
     data: new SlashCommandBuilder()
-            .setName('createchannels')
-            .setDescription('Creates serial channels with given options')
+            .setName('channels')
+            .setDescription('Manages channels')
             .addSubcommand(subCommands.create.getSubCom)
-            // .addSubcommand(subCommands.setup.getSubCom)
         ,
         async execute(interaction){
 
@@ -285,8 +289,9 @@ module.exports = {
 
             if(sh.checkGuildFile()){
                 let name = interaction.options.getSubcommand();
-
-                if(name === 'create') subCommands.inline.respond(interaction); 
+                
+                if(subCommands[name]) subCommands[name].respond(interaction);
+                 
             }else{
                 interaction.reply({content:'Please run /config init command before going any further', ephemeral: true})
             }
