@@ -31,6 +31,13 @@ class StorageHandler{
 
     constructor(guildId = null){
         this.#main_model.guildId = guildId;
+
+        if(this.checkGuildFile()){
+            this.readGuildFile().then(val=>{
+                // @ts-ignore
+                this.#main_model = JSON.parse(val);
+            })
+        }
     }
 
     set setGuildId(guildId){
@@ -60,8 +67,8 @@ class StorageHandler{
         return process.env.DEVELOPMENT_STATUS === 'True'? true : result;
     }
 
-    #readGuildFile(){
-        return fs.promises.readFile(this.#dir);
+    readGuildFile(){
+        return fs.promises.readFile(path.join(this.#dir, `/${this.#main_model.guildId}`));
     }
 
     writeGuildFile(){
@@ -92,6 +99,13 @@ class StorageHandler{
      */
     remove(value, type){
         this.#main_model[`${type}s`] = this.#main_model[`${type}s`].filter(channel => channel.name !== value || channel.id !== value)
+    }
+
+    /**
+     * TODO: stworzyć metode ktora zajmie sie wyciaganiem danych z callbacka then przy tworzeniu kanalow
+     */
+    channelProcess(){
+
     }
 }
 

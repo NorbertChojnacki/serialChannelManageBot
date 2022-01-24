@@ -2,8 +2,11 @@
 const {SlashCommandBuilder, SlashCommandSubcommandBuilder} = require('@discordjs/builders');
 // @ts-ignore
 const {CategoryChannel, Permissions, Interaction} = require('discord.js');
+const { SHARE_ENV } = require('worker_threads');
 
 const StorageHandler = require(require('path').join(__dirname, '../src/storageHandler.js'))
+
+let sh = new StorageHandler()
 
 class SubCom{
     constructor(name, desc){
@@ -22,9 +25,13 @@ class SubCom{
      */
     async respond(interaction){
         await interaction.reply({content:'inline', ephemeral: true});
-
+     
         this.inter = interaction;
         this.guild = this.inter.guild
+
+        sh.setGuildId = this.guild.id;
+        sh.readGuildFile();
+
         this.catchValues()
         this.doWhatHaveTo()
     }
@@ -264,7 +271,27 @@ class Create extends SubCom{
 
 class Delete extends SubCom{
     constructor(){
-        super('delete', 'Deletes chosen channels or categories')
+        super('delete', 'Deletes choosen channels or categories')
+
+        this.sub
+            .addStringOption(option => {
+                return option
+                    .setName('channel_name')
+                    .setDescription('Provide channel to be deleted')
+                    .setRequired(true)
+            })
+            .addIntegerOption(option =>{
+                return option
+                    .setName('min_channel_number')
+                    .setDescription('Provide')
+                    .setRequired(false)
+            })
+            .addIntegerOption(option =>{
+                return option
+                    .setName('max_channel_number')
+                    .setDescription('Provide')
+                    .setRequired(false)
+            })
     }
 
     async doWhatHaveTo(){
@@ -284,8 +311,6 @@ module.exports = {
             .addSubcommand(subCommands.create.getSubCom)
         ,
         async execute(interaction){
-
-            let sh = new StorageHandler(interaction.guildId)
 
             if(sh.checkGuildFile()){
                 let name = interaction.options.getSubcommand();
