@@ -16,7 +16,18 @@ module.exports = {
                 .addRoleOption(option=>{
                     return option
                     .setName('role')
-                    .setDescription('Choose role you want to be the primary one')
+                    .setDescription('Choose allowed to manage channels')
+                    .setRequired(true)
+                })
+            })
+            .addSubcommand(sub=>{
+                return sub
+                .setName('edit')
+                .setDescription('Edit Configuration')
+                .addRoleOption(option=>{
+                    return option
+                    .setName('role')
+                    .setDescription('Choose new role allowed to manage channels')
                     .setRequired(true)
                 })
             })
@@ -25,17 +36,22 @@ module.exports = {
         async execute(interaction){
             let name = interaction.options.getSubcommand();
             let content;
+            let role = interaction.options.getRole('role');
+            let sh = new StorageHandler(role.guild.id)
 
             if(name === 'init'){
-                let role = interaction.options.getRole('role');
-                let sh = new StorageHandler(role.guild.id)
                 content = 'config init command already initiated'
-
                 if(!sh.checkGuildFile()){
                     sh.setSudoRole = role.id;
                     sh.writeGuildFile();
                     content = 'config init successfully done'
                 }
+            }
+
+            if(name === 'edit'){
+                sh.setSudoRole = role.id;
+                sh.writeGuildFile();
+                content = 'role successfully changed'
             }
             
             interaction.reply({content, ephemeral: true})
