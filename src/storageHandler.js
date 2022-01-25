@@ -8,71 +8,72 @@ dotenv.config()
 
 class StorageHandler{
 
-    #main_model = {
+    main_model = {
         guildId: null,
         sudo_role: null,
         channels: [],
         roles: []
     }
 
-    #channel_model = {
+    channel_model = {
         id: null,
         parentId: null,
         name: null,
         type: null
     }
 
-    #role_model = {
+    role_model = {
         id: null,
         name: null
     }
 
-    #dir = path.join(__dirname, '../data');
+    dir = path.join(__dirname, '../data');
 
     constructor(guildId = null){
-        this.#main_model.guildId = guildId;
+        this.main_model.guildId = guildId;
 
-        if(this.checkGuildFile()){
+        this.checkGuildFile().then(res=>{
+            if(res){
             this.readGuildFile().then(val=>{
                 // @ts-ignore
-                this.#main_model = JSON.parse(val);
+                this.main_model = JSON.parse(val);
             })
         }
+        })
+
     }
 
     set setGuildId(guildId){
-        this.#main_model.guildId = guildId;
+        this.main_model.guildId = guildId;
     }
 
     set setSudoRole(roleId){
-        this.#main_model.sudo_role = roleId;
+        this.main_model.sudo_role = roleId;
     }
 
     /**
      * @returns {Promise<String[]>} array contains elements that are in the directory
      */
     async _readDir(){
-        return await fs.promises.readdir(this.#dir);
+        return await fs.promises.readdir(this.dir);
     }
 
     /**
-     * @returns {boolean} if guild file exists returns true, otherwise false
+     * @returns {Promise<boolean>} if guild file exists returns true, otherwise false
      */
-    checkGuildFile(){
+    async checkGuildFile(){
         let result = false;
-        this._readDir().then(res=>{
-            if(res.some(dir => dir === `${this.#main_model.guildId}.json`)) result = true;
-        })
-
-        return process.env.DEVELOPMENT_STATUS === 'True'? true : result;
+        let aa = await this._readDir();
+        
+        return aa.some(dir => dir === `${this.main_model.guildId}.json`);
     }
 
     readGuildFile(){
-        return fs.promises.readFile(path.join(this.#dir, `/${this.#main_model.guildId}`));
+        return fs.promises.readFile(path.join(this.dir, `/${this.main_model.guildId}.json`));
     }
 
     writeGuildFile(){
-        fs.promises.writeFile(path.join(this.#dir, `/${this.#main_model.guildId}.json`), JSON.stringify(this.#main_model))
+        fs.promises.writeFile(path.join(this.dir, `/${this.main_model.guildId}.json`), JSON.stringify(this.main_model))
     }
 
     /**
@@ -80,9 +81,9 @@ class StorageHandler{
      * @param {*} name 
      * @param {Object=} param2
      */
-    add(id, name, {type = null, parentId = null}){
+    addElem(id, name, {type = null, parentId = null}){
         let value = type === null ? 'role' : 'channel';
-        let elem = Object.assign({}, this[`#${value}_model`]);
+        let elem = Object.assign({}, this[`${value}_model`]);
         
         elem.id = id
         elem.name = name
@@ -90,23 +91,33 @@ class StorageHandler{
         if(elem?.parentId) elem.parentId = parentId;
         if(elem?.type) elem.type = type;
         
-        this.#main_model[value].push(elem);
+        this.main_model[`${value}s`].push(elem);
+    }
+
+    abc(){
+        console.log('asdf')
     }
 
     /**
      * @param {String} value digit channel/role id or name
      * @param {'channel'|'role'} type 
      */
-    remove(value, type){
-        this.#main_model[`${type}s`] = this.#main_model[`${type}s`].filter(channel => channel.name !== value || channel.id !== value)
+    removeElem(value, type){
+        this.main_model[`${type}s`] = this.main_model[`${type}s`].filter(channel => channel.name !== value || channel.id !== value)
     }
 
-    /**
-     * TODO: stworzyć metode ktora zajmie sie wyciaganiem danych z callbacka then przy tworzeniu kanalow
-     */
-    channelProcess(){
+    channelProcess(channel){
+        this.addElem(channel.id, channel.name, {type: channel.type, parentId: channel.parentId})
+    }
 
+    roleProcess(role){
+        console.log(this)
+        this.addElem(role.id, role.name)
     }
 }
 
 module.exports = StorageHandler;
+
+// let sh = new StorageHandler()
+
+// sh.channelProcess({id: 12, name: 'test', type:'text', parentId: 10 })
