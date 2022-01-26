@@ -76,26 +76,22 @@ class StorageHandler{
         fs.promises.writeFile(path.join(this.dir, `/${this.main_model.guildId}.json`), JSON.stringify(this.main_model))
     }
 
-    /**
-     * @param {*} id 
-     * @param {*} name 
-     * @param {Object=} param2
-     */
-    addElem(id, name, {type = null, parentId = null}){
-        let value = type === null ? 'role' : 'channel';
+    addElem(val){
+        let {id, name, type, parentId} = val
+        let value = (type === 'GUILD_VOICE' || type === 'GUILD_TEXT' || type === 'GUILD_CATEGORY' )? 'channel' : 'role';
         let elem = Object.assign({}, this[`${value}_model`]);
         
         elem.id = id
-        elem.name = name
-        
-        if(elem?.parentId) elem.parentId = parentId;
-        if(elem?.type) elem.type = type;
+        elem.name = name  
+        elem.parentId = parentId;
+        elem.type = type;
+
+        if(value === 'role'){
+            delete elem.parentId
+            delete elem.type
+        }
         
         this.main_model[`${value}s`].push(elem);
-    }
-
-    abc(){
-        console.log('asdf')
     }
 
     /**
@@ -106,14 +102,6 @@ class StorageHandler{
         this.main_model[`${type}s`] = this.main_model[`${type}s`].filter(channel => channel.name !== value || channel.id !== value)
     }
 
-    channelProcess(channel){
-        this.addElem(channel.id, channel.name, {type: channel.type, parentId: channel.parentId})
-    }
-
-    roleProcess(role){
-        console.log(this)
-        this.addElem(role.id, role.name)
-    }
 }
 
 module.exports = StorageHandler;

@@ -57,7 +57,6 @@ const rest = new REST({version: '9'}).setToken(process.env.TOKEN);
 
 //* Command Handler
 client.on('interactionCreate', async interaction=>{
-
     if(!interaction.isCommand()) return;
     let command = client.commands.get(interaction.commandName);
 

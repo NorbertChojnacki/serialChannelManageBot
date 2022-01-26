@@ -7,7 +7,6 @@ const { SHARE_ENV } = require('worker_threads');
 const StorageHandler = require(require('path').join(__dirname, '../src/storageHandler.js'))
 
 let sh = new StorageHandler()
-
 class SubCom{
     constructor(name, desc){
         this.sub = new SlashCommandSubcommandBuilder();
@@ -30,10 +29,13 @@ class SubCom{
         this.guild = this.inter.guild
 
         sh.setGuildId = this.guild.id;
+        
         sh.readGuildFile();
 
         this.catchValues()
         this.doWhatHaveTo()
+        console.log('jestem2', sh.main_model);
+
     }
 
     catchValues(){
@@ -44,7 +46,7 @@ class SubCom{
         })
     }
 
-    doWhatHaveTo(){
+    async doWhatHaveTo(){
 
     }
 
@@ -53,6 +55,7 @@ class SubCom{
 class Create extends SubCom{
     constructor(){
         super('create','Creates channels');
+        this.channelsToPromise = []
 
         //* Creating subcommand 
         this.sub
@@ -132,7 +135,7 @@ class Create extends SubCom{
                 name,
                 color: 'RANDOM',
                 reason: 'role manage bot'
-            });
+            }).then(role=> sh.addElem(role))
         })
 
         let regex = new RegExp(`\\d\\d\-${this.values.channel_name}`)
@@ -156,7 +159,11 @@ class Create extends SubCom{
         let channels = this.guild.channels;
         let roles = this.guild.roles;
 
-        let {id} = this.values.create_folder ? await channels.create(this.values.channel_name, {type: 'GUILD_CATEGORY'}) : {id: null};
+        let val = this.values.create_folder ? await channels.create(this.values.channel_name, {type: 'GUILD_CATEGORY'}) : {id: null};
+
+        let {id} = val
+        val.type = 'GUILD_CATEGORY'
+        if(id !== null) sh.addElem(val);
 
         let allRoles = await this.getRoles();
 
@@ -164,38 +171,27 @@ class Create extends SubCom{
          * Creates channel
          * @param {string} name channel name
          * @param {string} type channel type
-         * @param {string|number} roleId role id that gets the permission
-         * @returns {Promise<Void>} Return Promise that resolves
+         *
          */
-        function createChannel(name, type, roleId){
-            return Promise.resolve().then(v=>{
-                channels.create(name,{
+        async function createChannel(name, type, permissionOverwrites){
+            return new Promise((resolve, reject)=>{
+                let retVal = channels.create(name,{
                     parent: id,
                     type,
-                    permissionOverwrites:[
-                        {
-                            id: roleId,
-                            allow: [Permissions.FLAGS.VIEW_CHANNEL]
-                        },
-                        {
-                            id: roles.everyone.id,
-                            deny: [Permissions.FLAGS.VIEW_CHANNEL]
-                        }
-                    ]
+                    permissionOverwrites
                 })
+                resolve(retVal)
             })
         }
 
         //* get-role channel creation
         if(this.values.create_folder){
-            channels.create(`get-role-${this.values.channel_name}`, {
-                parent: id,
-                type: 'GUILD_TEXT',
-                permissionOverwrites:[{
+            createChannel(`get-role-${this.values.channel_name}`,'GUILD_TEXT', [{
                     id: roles.everyone.id,
                     allow: [Permissions.FLAGS.VIEW_CHANNEL]
-                }]
-            }).then(channel=>{
+                }]).then(channel=>{
+                    channel.type = 'GUILD_TEXT'
+                    sh.addElem(channel)
                 channel.send({embeds: [{
                     color: 'PURPLE',
                     title: 'Groups you can join',
@@ -227,45 +223,45 @@ class Create extends SubCom{
         }
 
         //* Shared channel creation
+        let permits = [{
+                    id: roles.everyone.id,
+                    allow: [Permissions.FLAGS.VIEW_CHANNEL]
+                }]
         if(this.values?.create_shared_channel !== "BOTH" && this.values?.create_shared_channel){
-            console.log('shared', this.values?.create_shared_channel)
-            channels.create(`coop-channel-${this.values.channel_name}`,{
-                parent: id,
-                type: this.values.create_shared_channel,
-                permissionOverwrites:[{
-                    id: roles.everyone.id,
-                    allow: [Permissions.FLAGS.VIEW_CHANNEL]
-                }]
-            })
+            this.channelsToPromise.push(createChannel(`coop-channel-${this.values.channel_name}`,this.values.create_shared_channel, permits));
         }else if(this.values?.create_shared_channel === 'BOTH'){
-            channels.create(`coop-channel-${this.values.channel_name}`,{
-                parent: id,
-                type: "GUILD_VOICE",
-                permissionOverwrites:[{
-                    id: roles.everyone.id,
-                    allow: [Permissions.FLAGS.VIEW_CHANNEL]
-                }]
-            })
-            channels.create(`coop-channel-${this.values.channel_name}`,{
-                parent: id,
-                type: "GUILD_TEXT",
-                permissionOverwrites:[{
-                    id: roles.everyone.id,
-                    allow: [Permissions.FLAGS.VIEW_CHANNEL]
-                }]
-            })
+            this.channelsToPromise.push(createChannel(`coop-channel-${this.values.channel_name}`,"GUILD_VOICE", permits));
+            this.channelsToPromise.push(createChannel(`coop-channel-${this.values.channel_name}`,"GUILD_TEXT", permits));
         }
 
         //* creating all wanted channels
         this.creationFor(name=>{
+            let permits = [
+                        {
+                            id: allRoles[name],
+                            allow: [Permissions.FLAGS.VIEW_CHANNEL]
+                        },
+                        {
+                            id: roles.everyone.id,
+                            deny: [Permissions.FLAGS.VIEW_CHANNEL]
+                        }
+                    ];
             if(this.values.what_channels !== 'BOTH'){
-                createChannel(name, this.values.what_channels, allRoles[name])
+                this.channelsToPromise.push(createChannel(name, this.values.what_channels,permits ))
             }else{
-                createChannel(name, 'GUILD_TEXT', allRoles[name])
-                createChannel(name, 'GUILD_VOICE', allRoles[name])
+                this.channelsToPromise.push(createChannel(name, 'GUILD_TEXT', permits))
+                this.channelsToPromise.push(createChannel(name, 'GUILD_VOICE', permits))
             }
         })
-
+        Promise.allSettled(this.channelsToPromise).then(results =>{
+            results.forEach(index=>{
+                // @ts-ignore
+                sh.addElem(index.value)
+            })
+            sh.writeGuildFile();
+        }
+            
+        ).catch(console.error)
     }
 }
 
@@ -312,10 +308,14 @@ module.exports = {
         ,
         async execute(interaction){
 
-            if(sh.checkGuildFile()){
+            sh.setGuildId = interaction.guild.id;
+            sh.readGuildFile()
+            if(await sh.checkGuildFile()){
                 let name = interaction.options.getSubcommand();
                 
-                if(subCommands[name]) subCommands[name].respond(interaction);
+                if(subCommands[name]){
+                    subCommands[name].respond(interaction);
+                } 
                  
             }else{
                 interaction.reply({content:'Please run /config init command before going any further', ephemeral: true})
