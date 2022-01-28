@@ -23,19 +23,20 @@ class SubCom{
      * @param {Interaction} interaction 
      */
     async respond(interaction){
-        await interaction.reply({content:'inline', ephemeral: true});
-     
         this.inter = interaction;
         this.guild = this.inter.guild
 
-        sh.setGuildId = this.guild.id;
-        
-        sh.readGuildFile();
+        sh.setGuildId = interaction.guild.id
+        let content = 'channel create'
+        if(await sh.checkGuildFile()){
+            sh.readGuildFile({sync:true})
+            this.catchValues()
+            this.doWhatHaveTo()
+        }else{
+             content = 'Please run /config init command before going any further'
+        }
 
-        this.catchValues()
-        this.doWhatHaveTo()
-        console.log('jestem2', sh.main_model);
-
+        await interaction.reply({content, ephemeral: true});
     }
 
     catchValues(){
@@ -306,20 +307,9 @@ module.exports = {
             .setDescription('Manages channels')
             .addSubcommand(subCommands.create.getSubCom)
         ,
-        async execute(interaction){
-
-            sh.setGuildId = interaction.guild.id;
-            sh.readGuildFile()
-            if(await sh.checkGuildFile()){
-                let name = interaction.options.getSubcommand();
-                
-                if(subCommands[name]){
-                    subCommands[name].respond(interaction);
-                } 
-                 
-            }else{
-                interaction.reply({content:'Please run /config init command before going any further', ephemeral: true})
-            }
-   
+        async execute(interaction){   
+            let name = interaction.options.getSubcommand()
+        
+            if(subCommands[name]) subCommands[name].respond(interaction)
         }
 }

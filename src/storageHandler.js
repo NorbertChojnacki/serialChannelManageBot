@@ -3,7 +3,6 @@ const path = require('path');
 
 // @ts-ignore
 const dotenv = require('dotenv');
-const { resolveSoa } = require('dns');
 dotenv.config()
 
 class StorageHandler{
@@ -62,14 +61,19 @@ class StorageHandler{
      * @returns {Promise<boolean>} if guild file exists returns true, otherwise false
      */
     async checkGuildFile(){
-        let result = false;
         let aa = await this._readDir();
+        let result = aa.some(dir => dir === `${this.main_model.guildId}.json`)
         
-        return aa.some(dir => dir === `${this.main_model.guildId}.json`);
+        return result;
     }
 
-    readGuildFile(){
-        return fs.promises.readFile(path.join(this.dir, `/${this.main_model.guildId}.json`));
+    readGuildFile(setting){
+        if(setting?.sync){
+            // @ts-ignore
+            this.main_model = JSON.parse(fs.readFileSync(path.join(this.dir, `/${this.main_model.guildId}.json`)))
+        }else{
+            return fs.promises.readFile(path.join(this.dir, `/${this.main_model.guildId}.json`))
+        }
     }
 
     writeGuildFile(){
@@ -105,7 +109,3 @@ class StorageHandler{
 }
 
 module.exports = StorageHandler;
-
-// let sh = new StorageHandler()
-
-// sh.channelProcess({id: 12, name: 'test', type:'text', parentId: 10 })
