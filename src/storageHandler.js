@@ -1,10 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// @ts-ignore
-const dotenv = require('dotenv');
-dotenv.config()
-
 class StorageHandler{
 
     main_model = {
@@ -63,7 +59,6 @@ class StorageHandler{
     async checkGuildFile(){
         let aa = await this._readDir();
         let result = aa.some(dir => dir === `${this.main_model.guildId}.json`)
-        
         return result;
     }
 
@@ -103,7 +98,8 @@ class StorageHandler{
      * @param {'channel'|'role'} type 
      */
     removeElem(value, type){
-        this.main_model[`${type}s`] = this.main_model[`${type}s`].filter(channel => channel.name !== value || channel.id !== value)
+        let store = this.main_model[`${type}s`].filter(channel => channel.name !== value)
+        this.main_model[`${type}s`] = store
     }
 
 }

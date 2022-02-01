@@ -1,7 +1,11 @@
 // @ts-ignore
 const {SlashCommandBuilder, SlashCommandSubcommandBuilder} = require('@discordjs/builders');
 // @ts-ignore
+const { channel } = require('diagnostics_channel');
+// @ts-ignore
+// @ts-ignore
 const {CategoryChannel, Permissions, Interaction} = require('discord.js');
+// @ts-ignore
 const { SHARE_ENV } = require('worker_threads');
 
 const StorageHandler = require(require('path').join(__dirname, '../src/storageHandler.js'))
@@ -27,16 +31,25 @@ class SubCom{
         this.guild = this.inter.guild
 
         sh.setGuildId = interaction.guild.id
-        let content = 'channel create'
-        if(await sh.checkGuildFile()){
-            sh.readGuildFile({sync:true})
-            this.catchValues()
-            this.doWhatHaveTo()
-        }else{
-             content = 'Please run /config init command before going any further'
-        }
+        let content = 'channel management'
+        try{
+                if(!sh.checkGuildFile()) throw new Error('not_init') // checks if config file exists
+                sh.readGuildFile({sync:true})
+                
+                if(interaction.guild.ownerId !== interaction.member.id || interaction.member.roles.cache.some(elem => elem.id === sh.main_model.sudo_role)) throw new Error('not_permission'); //checks if user has permission to run this command ( must be owner or role must be in config file)
 
-        await interaction.reply({content, ephemeral: true});
+                this.catchValues()
+                this.doWhatHaveTo()
+            
+        }catch(error){
+            switch(error.message){
+                case 'not_init': content = 'Please run /config init command before going any further'; break;
+                case 'not_permission': content = "You don't have permission to run this command"; break;
+                default: content = "Error occurred"; break;
+            }
+        }finally{
+            await interaction.reply({content, ephemeral: true});
+        }     
     }
 
     catchValues(){
@@ -47,10 +60,7 @@ class SubCom{
         })
     }
 
-    async doWhatHaveTo(){
-
-    }
-
+    async doWhatHaveTo(){}
 }
 
 class Create extends SubCom{
@@ -175,6 +185,7 @@ class Create extends SubCom{
          *
          */
         async function createChannel(name, type, permissionOverwrites){
+            // @ts-ignore
             return new Promise((resolve, reject)=>{
                 let retVal = channels.create(name,{
                     parent: id,
@@ -277,22 +288,60 @@ class Delete extends SubCom{
                     .setDescription('Provide channel to be deleted')
                     .setRequired(true)
             })
-            .addIntegerOption(option =>{
-                return option
-                    .setName('min_channel_number')
-                    .setDescription('Provide')
-                    .setRequired(false)
-            })
-            .addIntegerOption(option =>{
-                return option
-                    .setName('max_channel_number')
-                    .setDescription('Provide')
-                    .setRequired(false)
-            })
     }
 
     async doWhatHaveTo(){
+        // @ts-ignore
+        let content = 'successfully deleted'
+        try{
+            let regex = new RegExp(this.values.channel_name)
 
+            // @ts-ignore
+            let roleManage = new Promise((res,rej)=>{
+                sh.main_model.roles.forEach(elem => {
+                    if(regex.test(elem.name)) this.inter.guild.roles.delete(elem.id)
+                })
+                let ret = sh.main_model.roles.filter(role => regex.test(role.name));
+                res(['role', ret])
+            })
+            
+            // let channelManage = new Promise((res, rej)=>{
+            //     sh.main_model.channels.forEach(elem => {
+            //         if(regex.test(elem.name)){
+            //             this.inter.guild.channels.cache.forEach(channel => {
+            //                 if(channel.id === elem.id){ 
+            //                     channel.delete()
+            //                     sh.removeElem(elem.id, 'channel')
+            //                 }
+            //             });
+            //         }
+            //     });
+            // })
+            
+            Promise.allSettled([roleManage]).then(res=>{
+                console.log('res',res)
+                for(let elem of res){
+                    
+                    console.log('elem', elem)
+                    // @ts-ignore
+                    if(elem.status == 'fulfilled'){
+                        // @ts-ignore
+                        elem.value[1].forEach(element => {
+                                // @ts-ignore
+                                sh.removeElem(element.name, elem.value[0])
+                                
+                        }); 
+                    }
+                }
+                console.log('main_model_channel',sh.main_model.roles)
+                sh.writeGuildFile();
+            }).catch(err=>{
+                console.error(err)
+                throw new Error(err.message)
+            })
+        }catch(error){
+            console.error(error.message)
+        }
     }
 }
 
@@ -306,6 +355,7 @@ module.exports = {
             .setName('channels')
             .setDescription('Manages channels')
             .addSubcommand(subCommands.create.getSubCom)
+            .addSubcommand(subCommands.delete.getSubCom)
         ,
         async execute(interaction){   
             let name = interaction.options.getSubcommand()
