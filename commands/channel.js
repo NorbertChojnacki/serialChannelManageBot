@@ -170,6 +170,9 @@ class Create extends SubCom{
         let channels = this.guild.channels;
         let roles = this.guild.roles;
 
+        let bot = this.inter.guild.members.cache.filter(user =>user.user.id === this.inter.client.user.id)
+        this.bot_role = bot.first()._roles[0]
+
         let val = this.values.create_folder ? await channels.create(this.values.channel_name, {type: 'GUILD_CATEGORY'}) : {id: null};
 
         let {id} = val
@@ -238,6 +241,9 @@ class Create extends SubCom{
         let permits = [{
                     id: roles.everyone.id,
                     allow: [Permissions.FLAGS.VIEW_CHANNEL]
+                },{
+                    id: this.bot_role,
+                    allow: [Permissions.FLAGS.VIEW_CHANNEL]
                 }]
         if(this.values?.create_shared_channel !== "BOTH" && this.values?.create_shared_channel){
             this.channelsToPromise.push(createChannel(`coop-channel-${this.values.channel_name}`,this.values.create_shared_channel, permits));
@@ -256,6 +262,10 @@ class Create extends SubCom{
                         {
                             id: roles.everyone.id,
                             deny: [Permissions.FLAGS.VIEW_CHANNEL]
+                        },
+                        {
+                            id: this.bot_role,
+                            allow: [Permissions.FLAGS.VIEW_CHANNEL]
                         }
                     ];
             if(this.values.what_channels !== 'BOTH'){
@@ -305,35 +315,30 @@ class Delete extends SubCom{
                 res(['role', ret])
             })
             
-            // let channelManage = new Promise((res, rej)=>{
-            //     sh.main_model.channels.forEach(elem => {
-            //         if(regex.test(elem.name)){
-            //             this.inter.guild.channels.cache.forEach(channel => {
-            //                 if(channel.id === elem.id){ 
-            //                     channel.delete()
-            //                     sh.removeElem(elem.id, 'channel')
-            //                 }
-            //             });
-            //         }
-            //     });
-            // })
-            
-            Promise.allSettled([roleManage]).then(res=>{
-                console.log('res',res)
-                for(let elem of res){
-                    
-                    console.log('elem', elem)
-                    // @ts-ignore
-                    if(elem.status == 'fulfilled'){
-                        // @ts-ignore
-                        elem.value[1].forEach(element => {
-                                // @ts-ignore
-                                sh.removeElem(element.name, elem.value[0])
-                                
-                        }); 
+            let channelManage = new Promise((res, rej)=>{
+                let test = this.inter.guild.channels.cache.filter(channel => regex.test(channel.name))
+
+                sh.main_model.channels.forEach(elem => {
+                    if(regex.test(elem.name)){
+                        test.forEach(channel => {
+                            if(channel.id === elem.id) channel.delete()
+                        });
                     }
-                }
-                console.log('main_model_channel',sh.main_model.roles)
+                });
+                
+                let ret = sh.main_model.channels.filter(channel => regex.test(channel.name))
+                res(['channel', ret])
+            })
+            
+            Promise.allSettled([roleManage,channelManage]).then(res=>{
+
+                res.forEach(key=>{
+                    // @ts-ignore
+                    key?.value[1].forEach(element => {
+                        // @ts-ignore
+                        sh.removeElem(element.name, key?.value[0])
+                    });
+                })
                 sh.writeGuildFile();
             }).catch(err=>{
                 console.error(err)

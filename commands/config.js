@@ -31,7 +31,6 @@ module.exports = {
                     .setRequired(true)
                 })
             })
-
         ,
         async execute(interaction){
             let name = interaction.options.getSubcommand()
